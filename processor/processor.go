@@ -8,12 +8,11 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"xyz-isbn/constant"
 	"xyz-isbn/converter"
 	"xyz-isbn/models"
 	"xyz-isbn/updater"
 )
-
-const MAX_CONCURRENT_CALL = 5
 
 type BookProcessor struct {
 	wg  sync.WaitGroup
@@ -28,7 +27,7 @@ func NewBookProcessor(csvWriter io.Writer) *BookProcessor {
 }
 
 func (p *BookProcessor) ProcessBooks(ctx context.Context, books []models.Book) error {
-	semaphore := make(chan struct{}, MAX_CONCURRENT_CALL)
+	semaphore := make(chan struct{}, constant.MAX_CONCURRENT_CALL)
 
 	for _, book := range books {
 		select {
@@ -65,7 +64,7 @@ func (p *BookProcessor) ProcessBooks(ctx context.Context, books []models.Book) e
 }
 
 func (p *BookProcessor) writeToCSV(book models.Book) error {
-	if err := converter.ValidateISBNs(&book); err != nil {
+	if err := converter.CheckIfExists(&book); err != nil {
 		fmt.Printf("Error validating ISBNs for book %d: %v\n", book.ID, err)
 		return err
 	}

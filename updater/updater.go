@@ -14,7 +14,7 @@ func UpdateBook(book models.Book) error {
 	body := map[string]any{
 		"title":            book.Title,
 		"isbn_13":          book.ISBN13,
-		"isbn_10":          book.ISBN13,
+		"isbn_10":          book.ISBN10,
 		"publisher":        book.Publisher,
 		"publication_year": book.PublicationYear,
 		"list_price":       book.ListPrice,

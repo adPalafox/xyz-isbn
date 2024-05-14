@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"xyz-isbn/constant"
 	"xyz-isbn/processor"
 )
-
-const MAX_BATCH_COUNT = 10
-const BASE_URL = "http://localhost:8080/v1/api/book/"
 
 func main() {
 	fmt.Println("Started microservice")
@@ -24,7 +22,7 @@ func main() {
 	ctx := context.Background()
 
 	var page = 1
-	url := fmt.Sprintf("%vlist?length=100&page=1&sort=title&order=asc", BASE_URL)
+	url := fmt.Sprintf("%vlist?length=100&page=1&sort=title&order=asc", constant.BASE_URL)
 	for {
 		books, err := processor.FetchBookList(ctx, url)
 		if err != nil {
@@ -37,12 +35,12 @@ func main() {
 			break
 		}
 
-		if len(books) < MAX_BATCH_COUNT {
+		if len(books) < constant.MAX_BATCH_COUNT {
 			break
 		}
 
 		page++
-		url = fmt.Sprintf("%vlist?length=100&page=%d&sort=title&order=asc", BASE_URL, page)
+		url = fmt.Sprintf("%vlist?length=100&page=%d&sort=title&order=asc", constant.BASE_URL, page)
 	}
 
 	fmt.Println("Finished processing all book pages.")
