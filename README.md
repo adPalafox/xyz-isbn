@@ -13,6 +13,7 @@ Alternatively you can also do it directly with:
 ```
 go run main.go
 ```
+Please make sure that the commands are executed directly under the project directory
 
 ### Process
 The service will fetch the list of books enpoint, and automatically check for missing ISBN information and perform the necessary steps:
