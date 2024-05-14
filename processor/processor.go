@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sync"
 	"xyz-isbn/constant"
 	"xyz-isbn/converter"
@@ -15,15 +16,30 @@ import (
 )
 
 type BookProcessor struct {
-	wg  sync.WaitGroup
-	csv csv.Writer
+	wg            sync.WaitGroup
+	csv           csv.Writer
+	mtx           sync.Mutex
+	existingISBNs map[string]struct{}
 }
 
 func NewBookProcessor(csvWriter io.Writer) *BookProcessor {
-	return &BookProcessor{
-		wg:  sync.WaitGroup{},
-		csv: *csv.NewWriter(csvWriter),
+	processor := &BookProcessor{
+		wg:            sync.WaitGroup{},
+		csv:           *csv.NewWriter(csvWriter),
+		mtx:           sync.Mutex{},
+		existingISBNs: make(map[string]struct{}),
 	}
+
+	existingISBNs, err := readExistingISBNs()
+	if err != nil {
+		return nil
+	}
+	processor.existingISBNs = make(map[string]struct{}, len(existingISBNs))
+	for _, isbn := range existingISBNs {
+		processor.existingISBNs[isbn] = struct{}{}
+	}
+
+	return processor
 }
 
 func (p *BookProcessor) ProcessBooks(ctx context.Context, books []models.Book) error {
@@ -69,7 +85,45 @@ func (p *BookProcessor) writeToCSV(book models.Book) error {
 		return err
 	}
 
-	return p.csv.Write([]string{book.ISBN10, book.ISBN13})
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	err := p.csv.Write([]string{book.ISBN10, book.ISBN13})
+	if err != nil {
+		return fmt.Errorf("error writing book data to CSV: %w", err)
+	}
+
+	p.csv.Flush()
+
+	return nil
+}
+
+func readExistingISBNs() ([]string, error) {
+	file, err := os.Open(constant.CSV_FILE)
+	if err != nil {
+		return nil, fmt.Errorf("error opening CSV file: %w", err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+
+	var existingISBNs []string
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error reading CSV record: %w", err)
+		}
+
+		isbn10 := record[0]
+		isbn13 := record[1]
+
+		existingISBNs = append(existingISBNs, isbn10, isbn13)
+	}
+
+	return existingISBNs, nil
 }
 
 func (p *BookProcessor) FetchBookList(ctx context.Context, url string) ([]models.Book, error) {
